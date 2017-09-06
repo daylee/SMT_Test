@@ -4,6 +4,7 @@ import os.path
 
 from smt.methods import RBF
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 from scipy import linalg
 from smt.utils import compute_rms_error
@@ -68,18 +69,9 @@ azimuth[-1] = 2 * np.pi
 elevation[0] = 0.0
 elevation[-1] = np.pi
 
-"""
-counter = 0
-data = np.zeros((na, nz, ne, nPoint * nc))
-flat_size = na * nz * ne
-for p in range(nPoint):
-    for c in range(nc):
-        data[:, :, :, counter] = \
-            solar_raw2[7 * p + c][119:119 + flat_size].reshape((na, nz, ne))
-
-        #print(data[:, :, :, counter])
-        counter += 1
-"""
+xlimits = np.array([[angle[0],     angle[-1] ],
+                    [azimuth[0],   azimuth[-1] ],
+                    [elevation[0], elevation[-1] ] ])
 
 counter = 0
 flat_size = na * nz * ne
@@ -92,15 +84,6 @@ for p in range(nPoint):
         counter += 1
 
 
-"""
-xt = np.zeros((na*nz*ne, 3))
-counter = 0
-for i in range(elevation.shape[0]):
-    for j in range(azimuth.shape[0]):
-        for k in range(angle.shape[0]):
-            xt[counter]= np.array([angle[k], azimuth[j], elevation[i]])
-            counter += 1
-"""
 
 xt = np.zeros((flat_size, 3))
 counter = 0
@@ -110,17 +93,25 @@ for i in range(elevation.shape[0]):
             xt[counter,:]= np.array([angle[k], azimuth[j], elevation[i]])
             counter += 1
 
-
 print(xt)
 print(xt.shape)
 yt = data[:,1]
 print(yt.shape)
-sm = RBF(d0=5)
+sm = RMTB(xlimits=xlimits, order=4, num_ctrl_pts=40, reg_dv=1e-15, reg_cons=1e-15)
 sm.set_training_values(xt, yt)
 sm.train()
 
-#xt = np.array([azimuth, elevation])
-#yt = np.array(data[1,:,:,:])
-#plt.plot(xt, yt,  'o')
-#plt.show()
-#print(yt)
+
+# Test the model
+Az, El = np.meshgrid(azimuth, elevation)
+Z = np.zeros((Az.shape[0],Az.shape[1]))
+
+for i in range(Az.shape[0]):
+    for j in range(Az.shape[1]):
+        Z[i,j] = sm.predict_values(np.hstack((np.pi/4, Az[i,j],El[i,j])).reshape((1,3)))
+
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+surf = ax.plot_surface(Az, El, Z)
+
+plt.show()
