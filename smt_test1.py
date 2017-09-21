@@ -83,20 +83,33 @@ for p in range(nPoint):
         #print(data[:, :, :, counter])
         counter += 1
 
+counter = 0
+data2 = np.zeros((na, nz, ne, nPoint*nc))
+flat_size = na * nz * ne
+for p in range(nPoint):
+    for c in range(nc):
+        data2[:, :, :, counter] = \
+            solar_raw2[7 * p + c][119:119 + flat_size].reshape((na,
+                                                          nz,
+                                                          ne))
+        counter += 1
+
 
 
 xt = np.zeros((flat_size, 3))
+yt = np.zeros((flat_size, 1))
 counter = 0
 for i in range(elevation.shape[0]):
     for j in range(azimuth.shape[0]):
         for k in range(angle.shape[0]):
             xt[counter,:]= np.array([angle[k], azimuth[j], elevation[i]])
+            yt[counter] = data2[k, j, i, 1]
             counter += 1
 
-print(xt)
-print(xt.shape)
-yt = data[:,1]
-print(yt.shape)
+#print(xt)
+#print(xt.shape)
+#yt = data[:,1]
+#print(yt.shape)
 sm = RMTB(xlimits=xlimits, order=4, num_ctrl_pts=40, reg_dv=1e-15, reg_cons=1e-15)
 sm.set_training_values(xt, yt)
 sm.train()
@@ -108,7 +121,9 @@ Z = np.zeros((Az.shape[0],Az.shape[1]))
 
 for i in range(Az.shape[0]):
     for j in range(Az.shape[1]):
-        Z[i,j] = sm.predict_values(np.hstack((np.pi/4, Az[i,j],El[i,j])).reshape((1,3)))
+        #Z[i,j] = sm.predict_values(np.hstack((np.pi / 2, Az[i,j], El[i,j])).reshape((1,3)))
+        #print("angle : ",np.hstack((np.pi/2, Az[i,j], El[i,j])).reshape((1,3)))
+        Z[i, j] = data2[9, j, i, 1]
 
 fig = plt.figure()
 ax = fig.gca(projection='3d')
