@@ -1,15 +1,32 @@
 ''' Solar discipline for CADRE '''
 
-import numpy as np
+
 
 #from openmdao.main.api import Component
 #from openmdao.lib.datatypes.api import Float, Array
 
 #from CADRE.kinematics import fixangles
+
 from smt.methods import RBF
 import os
+import numpy as np
+from smt.methods import RBF
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
-class Solar_ExposedArea():
+try:
+    from smt.methods import IDW, RBF, RMTC, RMTB
+    compiled_available = True
+except:
+    compiled_available = False
+
+try:
+#    import matplotlib.pyplot as plt
+    plot_status = True
+except:
+    plot_status = False
+
+class Solar_ExposedArea:
 
     '''Exposed area calculation for a given solar cell
 
@@ -29,17 +46,14 @@ class Solar_ExposedArea():
     # Inputs
     # finAngle = Float(0., iotype="in", units="rad", desc="Fin angle of solar panel", copy=None)
 
-    def __init__(self, n, raw1=None, raw2=None):
-        super(Solar_ExposedArea, self).__init__()
+    def __init__(self):
 
-        if raw1 is None:
-            fpath = os.path.dirname(os.path.realpath(__file__))
-            raw1 = np.genfromtxt(fpath + '/data/Solar/Area10.txt')
-        if raw2 is None:
-            fpath = os.path.dirname(os.path.realpath(__file__))
-            raw2 = np.loadtxt(fpath + "/data/Solar/Area_all.txt")
+        fpath = os.path.dirname(os.path.realpath(__file__))
+        raw1 = np.genfromtxt(fpath + '/data/Solar/Area10.txt')
+        fpath = os.path.dirname(os.path.realpath(__file__))
+        raw2 = np.loadtxt(fpath + "/data/Solar/Area_all.txt")
 
-        self.n = n
+        self.n = 1
         self.nc = 7
         self.np = 12
 
@@ -89,6 +103,10 @@ class Solar_ExposedArea():
         elevation[0] = 0.0
         elevation[-1] = np.pi
 
+        xlimits = np.array([[angle[0], angle[-1]],
+                            [azimuth[0], azimuth[-1]],
+                            [elevation[0], elevation[-1]]])
+
         counter = 0
         data = np.zeros((self.na, self.nz, self.ne, self.np * self.nc))
         flat_size = self.na * self.nz * self.ne
@@ -107,7 +125,7 @@ class Solar_ExposedArea():
             for j in range(azimuth.shape[0]):
                 for k in range(angle.shape[0]):
                     xt[counter, :] = np.array([angle[k], azimuth[j], elevation[i]])
-                    yt[counter] = data2[k, j, i, 1]
+                    yt[counter] = data[k, j, i, 1]
                     counter += 1
 
         # print(xt)
@@ -119,15 +137,32 @@ class Solar_ExposedArea():
         sm.train()
 
 
-        self.MBI = MBI(data, [angle, azimuth, elevation],
-                             [4, 10, 8],
-                             [4, 4, 4])
+        #self.MBI = MBI(data, [angle, azimuth, elevation],
+        #                     [4, 10, 8],
+        #                     [4, 4, 4])
 
-        self.x = np.zeros((self.n, 3))
-        self.Jfin = None
-        self.Jaz = None
-        self.Jel = None
+        #self.x = np.zeros((self.n, 3))
+        #self.Jfin = None
+        #self.Jaz = None
+        #self.Jel = None
 
+        Az, El = np.meshgrid(azimuth, elevation)
+        Z = np.zeros((Az.shape[0], Az.shape[1]))
+
+        for i in range(Az.shape[0]):
+            for j in range(Az.shape[1]):
+                #Z[i,j] = sm.predict_values(np.hstack((np.pi / 2, Az[i,j], El[i,j])).reshape((1,3)))
+                # print("angle : ",np.hstack((np.pi/2, Az[i,j], El[i,j])).reshape((1,3)))
+                Z[i, j] = data[9, j, i, 1]
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        surf = ax.plot_surface(Az, El, Z)
+
+        plt.show()
+
+
+'''
     def list_deriv_vars(self):
         input_keys = ('azimuth', 'elevation', 'finAngle',)
         output_keys = ('exposedArea',)
@@ -197,3 +232,6 @@ class Solar_ExposedArea():
                     result['elevation'] += \
                         np.sum(
                             self.Jel[:, c, :].T * arg['exposedArea'][c, :, :], 0)
+'''
+
+Solar_ExposedArea = Solar_ExposedArea()
