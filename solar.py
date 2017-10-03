@@ -141,10 +141,10 @@ class Solar_ExposedArea:
         #                     [4, 10, 8],
         #                     [4, 4, 4])
 
-        #self.x = np.zeros((self.n, 3))
-        #self.Jfin = None
-        #self.Jaz = None
-        #self.Jel = None
+        self.x = np.zeros((self.n, 3))
+        self.Jfin = None
+        self.Jaz = None
+        self.Jel = None
 
         Az, El = np.meshgrid(azimuth, elevation)
         Z = np.zeros((Az.shape[0], Az.shape[1]))
