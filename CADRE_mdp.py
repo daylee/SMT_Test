@@ -2,15 +2,21 @@ import os.path
 import numpy as np
 
 from openmdao.api import Component
+from openmdao.test.util import set_pyoptsparse_opt
+from openmdao.drivers.pyoptsparse_driver import pyOptSparseDriver
+
+# check that pyoptsparse is installed
+# if it is, try to use SNOPT but fall back to SLSQP
+
 #from openmdao.lib.drivers.api import CONMINdriver
 
-import warnings
-try:
-    from pyopt_driver import pyopt_driver
-except ImportError:
-    warnings.warn(
-        "pyopt_driver must be installed to run the full CADRE optimization",
-        ImportWarning)
+#import warnings
+#try:
+#    from pyopt_driver import pyopt_driver
+#except ImportError:
+#    warnings.warn(
+#        "pyopt_driver must be installed to run the full CADRE optimization",
+#        ImportWarning)
 
 from CADRE.CADRE_assembly import CADRE
 
@@ -21,15 +27,21 @@ class CADRE_Optimization(Component):
         super(CADRE_Optimization, self).__init__()
 
         # add SNOPT driver
-        self.add("driver", pyopt_driver.pyOptDriver())
-        self.driver.optimizer = "SNOPT"
-        self.driver.options = {'Major optimality tolerance': 1e-3,
-                               'Iterations limit': 500000000,
-                               "New basis file": 10}
-        if os.path.exists("fort.10"):
-            self.driver.options["Old basis file"] = 10
+        OPT, OPTIMIZER = set_pyoptsparse_opt('SNOPT')
+        self.driver = pyOptSparseDriver()
+        self.driver.options['optimizer'] = OPTIMIZER
+
+        #self.add("driver", pyopt_driver.pyOptDriver())
+        #self.driver.optimizer = "SNOPT"
+        #self.driver.options = {'Major optimality tolerance': 1e-3,
+        #                       'Iterations limit': 500000000,
+        #                       "New basis file": 10}
+        #if os.path.exists("fort.10"):
+        #    self.driver.options["Old basis file"] = 10
 
         #driver = self.add("driver", CONMINdriver())
+        self.driver = pyOptSparseDriver()
+        self.driver.options['optimizer'] = 'SNOPT'
 
         # Raw data to load
         fpath = os.path.dirname(os.path.realpath(__file__))
@@ -53,11 +65,13 @@ class CADRE_Optimization(Component):
         # build design points
         names = ['pt%s' % i for i in range(npts)]
         for i, name in enumerate(names):
-            comp = self.add(name, CADRE(n, m, solar_raw1, solar_raw2,
-                                        comm_raw, power_raw))
+            #comp = self.add(name, CADRE(n, m, solar_raw1, solar_raw2,
+            #                            comm_raw, power_raw))
+            #self.add(name, CADRE(n, m, solar_raw1, solar_raw2,comm_raw, power_raw))
+            name = CADRE(n, m, solar_raw1, solar_raw2, comm_raw, power_raw)
             self.driver.workflow.add(name)
-            comp.set("LD", LDs[i])
-            comp.set("r_e2b_I0", r_e2b_I0s[i])
+            #comp.set("LD", LDs[i])
+            #comp.set("r_e2b_I0", r_e2b_I0s[i])
 
             # add parameters to driver
             self.driver.add_parameter("%s.CP_Isetpt" % name, low=0., high=0.4)
